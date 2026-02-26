@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  supabaseId    String         @unique @map("supabase_id")
+  email         String         @unique
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  subscriptions Subscription[]
+  detectedItems DetectedItem[]
+
+  @@map("users")
+}
+
+model Merchant {
+  id                String         @id @default(uuid())
+  canonicalName     String         @map("canonical_name")
+  slug              String         @unique
+  category          String
+  commonDescriptors String[]       @map("common_descriptors")
+  websiteUrl        String?        @map("website_url")
+  logoLetter        String         @map("logo_letter")
+  logoColor         String         @map("logo_color")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  subscriptions     Subscription[]
+  detectedItems     DetectedItem[]
+
+  @@map("merchants")
+}
+
+model Subscription {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  merchantId      String?  @map("merchant_id")
+  customName      String?  @map("custom_name")
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("AUD")
+  frequency       String   // weekly | fortnightly | monthly | quarterly | annual
+  category        String
+  nextBillingDate DateTime? @map("next_billing_date")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant Merchant? @relation(fields: [merchantId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model DetectedItem {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  ingestionMethod  String   @map("ingestion_method") // pdf | screenshot | email | manual
+  status           String   @default("PENDING") // PENDING | CONFIRMED | DISMISSED | MERGED
+  duplicate        Boolean  @default(false)
+
+  // AI-extracted fields — purged after review or after 30 days
+  aiMerchantName   String?  @map("ai_merchant_name")
+  aiAmount         Decimal? @map("ai_amount") @db.Decimal(10, 2)
+  aiCurrency       String?  @map("ai_currency")
+  aiFrequency      String?  @map("ai_frequency")
+  aiDetectedDate   String?  @map("ai_detected_date")
+  aiNextBilling    String?  @map("ai_next_billing")
+  aiConfidence     String?  @map("ai_confidence") // high | low
+  aiNotes          String?  @map("ai_notes")
+  aiFieldsPurgedAt DateTime? @map("ai_fields_purged_at")
+
+  // Resolved merchant (after matching)
+  merchantId       String?  @map("merchant_id")
+
+  sourceHash       String?  @map("source_hash") // SHA-256 of uploaded file for dedup
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant Merchant? @relation(fields: [merchantId], references: [id])
+
+  @@map("detected_items")
+}
