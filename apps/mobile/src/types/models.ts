@@ -3,22 +3,42 @@ export type SubscriptionFrequency = 'weekly' | 'fortnightly' | 'monthly' | 'quar
 export type DetectedItemStatus = 'PENDING' | 'CONFIRMED' | 'DISMISSED' | 'MERGED';
 
 export type SubscriptionCategory =
-  | 'Entertainment'
-  | 'Productivity'
-  | 'Cloud'
-  | 'Finance'
-  | 'Health'
-  | 'News'
-  | 'Education'
-  | 'Gaming'
-  | 'Music'
-  | 'Shopping'
-  | 'Utilities'
-  | 'Other';
+  | 'STREAMING_VIDEO'
+  | 'STREAMING_MUSIC'
+  | 'GAMING'
+  | 'PODCASTS_AUDIO'
+  | 'PRODUCTIVITY'
+  | 'CLOUD_STORAGE'
+  | 'SOFTWARE_TOOLS'
+  | 'COMMUNICATION'
+  | 'FITNESS'
+  | 'FOOD_DELIVERY'
+  | 'NEWS_MAGAZINES'
+  | 'INTERNET_PHONE'
+  | 'UTILITIES_HOME'
+  | 'VPN_SECURITY'
+  | 'FINANCE_INVEST'
+  | 'SHOPPING_BOXES'
+  | 'PRIME_MEMBERSHIPS'
+  | 'EDUCATION'
+  | 'OTHER';
+
+export type PlanType = 'INDIVIDUAL' | 'DUO' | 'FAMILY' | 'STUDENT' | 'BUSINESS' | 'ENTERPRISE';
 
 export type IngestionMethod = 'pdf' | 'screenshot' | 'email' | 'manual';
 
 export type Confidence = 'high' | 'low';
+
+export interface MerchantPlan {
+  id: string;
+  label: string;
+  tierRank: number;
+  amountsAud: number[];
+  maxUsers: number | null;
+  planType: PlanType;
+  features: string[];
+  isActive: boolean;
+}
 
 export interface User {
   id: string;
@@ -33,8 +53,10 @@ export interface Merchant {
   category: SubscriptionCategory;
   commonDescriptors: string[];
   websiteUrl: string | null;
+  logoUrl: string | null;
   logoLetter: string;
   logoColor: string;
+  knownPlans: MerchantPlan[];
 }
 
 export interface DetectedItem {
@@ -53,6 +75,7 @@ export interface DetectedItem {
   aiFieldsPurgedAt: string | null;
   merchantId: string | null;
   merchant: Merchant | null;
+  rawDescriptor: string | null;
   duplicate: boolean;
   createdAt: string;
 }
@@ -70,6 +93,9 @@ export interface Subscription {
   category: SubscriptionCategory;
   nextBillingDate: string | null;
   isActive: boolean;
+  detectedPlanId: string | null;
+  planConfirmed: boolean;
+  logoUrl: string | null;
   logoColor: string;
   logoLetter: string;
   websiteUrl: string | null;
@@ -87,7 +113,7 @@ export interface DashboardData {
 }
 
 export interface CategoryBreakdown {
-  name: SubscriptionCategory;
+  name: string;
   value: number;
   color: string;
 }

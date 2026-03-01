@@ -17,7 +17,11 @@ export const config = {
   vertexAi: {
     projectId: process.env.GCP_PROJECT_ID ?? '',
     location: process.env.GCP_LOCATION ?? 'australia-southeast1',
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.0-flash',
+  },
+
+  logoDev: {
+    token: process.env.LOGO_DEV_TOKEN ?? '',
   },
 
   rateLimit: {

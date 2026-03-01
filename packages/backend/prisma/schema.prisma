@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 model User {
@@ -23,11 +23,13 @@ model Merchant {
   id                String         @id @default(uuid())
   canonicalName     String         @map("canonical_name")
   slug              String         @unique
-  category          String
+  category          String         // STREAMING_VIDEO, STREAMING_MUSIC, GAMING, etc.
   commonDescriptors String[]       @map("common_descriptors")
   websiteUrl        String?        @map("website_url")
+  logoUrl           String?        @map("logo_url")
   logoLetter        String         @map("logo_letter")
   logoColor         String         @map("logo_color")
+  knownPlans        Json?          @map("known_plans") @db.JsonB // MerchantPlan[]
   createdAt         DateTime       @default(now()) @map("created_at")
   subscriptions     Subscription[]
   detectedItems     DetectedItem[]
@@ -43,9 +45,11 @@ model Subscription {
   amount          Decimal  @db.Decimal(10, 2)
   currency        String   @default("AUD")
   frequency       String   // weekly | fortnightly | monthly | quarterly | annual
-  category        String
+  category        String   // STREAMING_VIDEO, STREAMING_MUSIC, etc.
   nextBillingDate DateTime? @map("next_billing_date")
   isActive        Boolean  @default(true) @map("is_active")
+  detectedPlanId  String?  @map("detected_plan_id")
+  planConfirmed   Boolean  @default(false) @map("plan_confirmed")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -77,6 +81,7 @@ model DetectedItem {
   merchantId       String?  @map("merchant_id")
 
   sourceHash       String?  @map("source_hash") // SHA-256 of uploaded file for dedup
+  rawDescriptor    String?  @map("raw_descriptor") // Original bank descriptor before normalisation
 
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")

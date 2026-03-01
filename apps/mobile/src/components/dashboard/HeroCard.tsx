@@ -1,6 +1,7 @@
 import { View, Text } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { CreditCard, TrendingUp, ChevronRight } from 'lucide-react-native';
+import { SpendComparison } from './SpendComparison';
 
 interface HeroCardProps {
   totalMonthly: number;
@@ -44,6 +45,9 @@ export function HeroCard({ totalMonthly, totalAnnual, activeCount }: HeroCardPro
           </Text>
         </Text>
       </View>
+
+      {/* Spend Comparison */}
+      <SpendComparison totalAnnual={totalAnnual} />
 
       {/* Divider + Count */}
       <View className="mt-4 pt-4 border-t border-surface-divider flex-row items-center justify-between">

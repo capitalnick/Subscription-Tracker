@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../middleware/auth.js';
 import type { AuthenticatedRequest } from '../types.js';
-import { prisma } from '../lib/prisma.js';
+import { getAdminClient } from '../lib/supabase.js';
 import { extractSubscriptions } from '../services/vertexAi.js';
-import { matchMerchant } from '../services/merchant.js';
+import { resolveMerchant, matchMerchant } from '../services/merchant.js';
 import { hashBuffer } from '../utils/hash.js';
 import {
   manualEntrySchema,
@@ -18,12 +18,18 @@ async function processExtracted(
   buffer: Buffer,
   extractionType: 'pdf' | 'screenshot',
 ) {
+  const db = getAdminClient();
   const sourceHash = hashBuffer(buffer);
 
   // Check for duplicate uploads
-  const existingUpload = await prisma.detectedItem.findFirst({
-    where: { userId, sourceHash, status: 'PENDING' },
-  });
+  const { data: existingUpload } = await db
+    .from('detected_items')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('source_hash', sourceHash)
+    .eq('status', 'PENDING')
+    .limit(1)
+    .single();
 
   if (existingUpload) {
     return { duplicate: true, items: [], count: 0 };
@@ -32,40 +38,43 @@ async function processExtracted(
   // Extract subscriptions via Vertex AI
   const extracted = await extractSubscriptions(buffer, extractionType);
 
-  // Create detected items inside a transaction
-  const items = await prisma.$transaction(
-    extracted.map((sub) =>
-      prisma.detectedItem.create({
-        data: {
-          userId,
-          ingestionMethod: method,
-          aiMerchantName: sub.merchantName,
-          aiAmount: sub.amount,
-          aiCurrency: sub.currency ?? 'AUD',
-          aiFrequency: sub.frequency,
-          aiDetectedDate: sub.detectedDate,
-          aiNextBilling: sub.nextBilling,
-          aiConfidence: sub.confidence,
-          aiNotes: sub.notes,
-          sourceHash,
-        },
-      }),
-    ),
-  );
-
-  // Match merchants (non-transactional, best-effort)
-  const enriched = await Promise.all(
-    items.map(async (item) => {
-      const merchant = await matchMerchant(item.aiMerchantName ?? '');
-      if (merchant) {
-        await prisma.detectedItem.update({
-          where: { id: item.id },
-          data: { merchantId: merchant.id },
-        });
-      }
-      return { ...item, merchantId: merchant?.id ?? null, merchant: merchant ?? null };
+  // Resolve merchants BEFORE insert
+  const resolved = await Promise.all(
+    extracted.map(async (sub) => {
+      const result = await resolveMerchant(sub.merchantName);
+      return { sub, result };
     }),
   );
+
+  // Create detected items with merchant_id and raw_descriptor pre-populated
+  const itemsToInsert = resolved.map(({ sub, result }) => ({
+    user_id: userId,
+    ingestion_method: method,
+    ai_merchant_name: result?.canonicalName ?? sub.merchantName,
+    ai_amount: sub.amount,
+    ai_currency: sub.currency ?? 'AUD',
+    ai_frequency: sub.frequency,
+    ai_detected_date: sub.detectedDate,
+    ai_next_billing: sub.nextBilling,
+    ai_confidence: sub.confidence,
+    ai_notes: sub.notes,
+    source_hash: sourceHash,
+    merchant_id: result?.merchant?.id ?? null,
+    raw_descriptor: sub.merchantName,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const { data: items, error } = await db
+    .from('detected_items')
+    .insert(itemsToInsert)
+    .select('*, merchants(*)');
+
+  if (error) throw error;
+
+  const enriched = (items ?? []).map((item) => ({
+    ...item,
+    merchant: item.merchants ?? null,
+  }));
 
   return { duplicate: false, items: enriched, count: enriched.length };
 }
@@ -123,85 +132,97 @@ export async function ingestRoutes(app: FastifyInstance) {
     return reply.send({ items: result.items, count: result.count });
   });
 
-  // Email forwarding (webhook from SendGrid or direct POST)
+  // Email forwarding
   app.post('/email', { preHandler: [authMiddleware] }, async (request, reply) => {
     const { userId } = request as AuthenticatedRequest;
     const body = emailIngestSchema.parse(request.body);
+    const db = getAdminClient();
 
-    // Combine subject + body for extraction
     const emailContent = `From: ${body.from}\nSubject: ${body.subject}\n\n${body.body}`;
     const buffer = Buffer.from(emailContent, 'utf-8');
     const sourceHash = hashBuffer(buffer);
 
     // Check duplicate
-    const existing = await prisma.detectedItem.findFirst({
-      where: { userId, sourceHash, status: 'PENDING' },
-    });
+    const { data: existing } = await db
+      .from('detected_items')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('source_hash', sourceHash)
+      .eq('status', 'PENDING')
+      .limit(1)
+      .single();
 
     if (existing) {
       return reply.status(409).send({ statusCode: 409, message: 'This email has already been processed' });
     }
 
-    // Extract via AI (treat as text content, not PDF/image)
     const extracted = await extractSubscriptions(buffer, 'pdf');
 
-    const items = await prisma.$transaction(
-      extracted.map((sub) =>
-        prisma.detectedItem.create({
-          data: {
-            userId,
-            ingestionMethod: 'email',
-            aiMerchantName: sub.merchantName,
-            aiAmount: sub.amount,
-            aiCurrency: sub.currency ?? 'AUD',
-            aiFrequency: sub.frequency,
-            aiDetectedDate: sub.detectedDate,
-            aiNextBilling: sub.nextBilling,
-            aiConfidence: sub.confidence,
-            aiNotes: sub.notes,
-            sourceHash,
-          },
-        }),
-      ),
-    );
-
-    // Best-effort merchant matching
-    const enriched = await Promise.all(
-      items.map(async (item) => {
-        const merchant = await matchMerchant(item.aiMerchantName ?? '');
-        if (merchant) {
-          await prisma.detectedItem.update({
-            where: { id: item.id },
-            data: { merchantId: merchant.id },
-          });
-        }
-        return { ...item, merchant: merchant ?? null };
+    // Resolve merchants BEFORE insert
+    const resolved = await Promise.all(
+      extracted.map(async (sub) => {
+        const result = await resolveMerchant(sub.merchantName);
+        return { sub, result };
       }),
     );
+
+    const itemsToInsert = resolved.map(({ sub, result }) => ({
+      user_id: userId,
+      ingestion_method: 'email',
+      ai_merchant_name: result?.canonicalName ?? sub.merchantName,
+      ai_amount: sub.amount,
+      ai_currency: sub.currency ?? 'AUD',
+      ai_frequency: sub.frequency,
+      ai_detected_date: sub.detectedDate,
+      ai_next_billing: sub.nextBilling,
+      ai_confidence: sub.confidence,
+      ai_notes: sub.notes,
+      source_hash: sourceHash,
+      merchant_id: result?.merchant?.id ?? null,
+      raw_descriptor: sub.merchantName,
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { data: items, error } = await db
+      .from('detected_items')
+      .insert(itemsToInsert)
+      .select('*, merchants(*)');
+
+    if (error) throw error;
+
+    const enriched = (items ?? []).map((item) => ({
+      ...item,
+      merchant: item.merchants ?? null,
+    }));
 
     return reply.send({ items: enriched, count: enriched.length });
   });
 
-  // Manual entry — creates a Subscription directly (no review queue)
+  // Manual entry — local lookup only, no AI cost
   app.post('/manual', { preHandler: [authMiddleware] }, async (request, reply) => {
     const { userId } = request as AuthenticatedRequest;
     const body = manualEntrySchema.parse(request.body);
+    const db = getAdminClient();
 
     const merchant = await matchMerchant(body.name);
 
-    const subscription = await prisma.subscription.create({
-      data: {
-        userId,
-        merchantId: merchant?.id ?? null,
-        customName: body.name,
+    const { data: subscription, error } = await db
+      .from('subscriptions')
+      .insert({
+        user_id: userId,
+        merchant_id: merchant?.id ?? null,
+        custom_name: body.name,
         amount: body.amount,
         currency: body.currency,
         frequency: body.frequency,
         category: body.category !== 'Other' ? body.category : (merchant?.category ?? 'Other'),
-        nextBillingDate: body.nextBillingDate ? new Date(body.nextBillingDate) : null,
-      },
-      include: { merchant: true },
-    });
+        next_billing_date: body.nextBillingDate ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .select('*, merchants(*)')
+      .single();
+
+    if (error) throw error;
 
     return reply.status(201).send({ subscription });
   });
