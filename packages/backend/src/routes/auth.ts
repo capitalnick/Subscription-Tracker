@@ -1,26 +1,40 @@
 import type { FastifyInstance } from 'fastify';
-import { prisma } from '../lib/prisma.js';
+import { getAdminClient } from '../lib/supabase.js';
 import { registerProfileSchema } from '../utils/validation.js';
 
 export async function authRoutes(app: FastifyInstance) {
-  // Create user profile after Supabase signup
   app.post('/register-profile', async (request, reply) => {
     const body = registerProfileSchema.parse(request.body);
+    const db = getAdminClient();
 
-    const existing = await prisma.user.findUnique({
-      where: { supabaseId: body.supabaseId },
-    });
+    // Check if user already exists
+    const { data: existing } = await db
+      .from('users')
+      .select('*')
+      .eq('supabase_id', body.supabaseId)
+      .single();
 
     if (existing) {
       return reply.status(200).send({ user: existing });
     }
 
-    const user = await prisma.user.create({
-      data: {
-        supabaseId: body.supabaseId,
+    const { data: user, error } = await db
+      .from('users')
+      .insert({
+        id: body.supabaseId,
+        supabase_id: body.supabaseId,
         email: body.email,
-      },
-    });
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return reply.status(409).send({ statusCode: 409, message: 'User already exists' });
+      }
+      throw error;
+    }
 
     return reply.status(201).send({ user });
   });

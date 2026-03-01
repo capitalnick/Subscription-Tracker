@@ -1,9 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { prisma } from '../lib/prisma.js';
+import { getAdminClient } from '../lib/supabase.js';
 import { merchantSearchSchema } from '../utils/validation.js';
 
 export async function merchantRoutes(app: FastifyInstance) {
-  // Typeahead search for merchants
   app.get('/search', async (request, reply) => {
     const result = merchantSearchSchema.safeParse(request.query);
 
@@ -12,19 +11,16 @@ export async function merchantRoutes(app: FastifyInstance) {
     }
 
     const { q } = result.data;
+    const db = getAdminClient();
 
-    const merchants = await prisma.merchant.findMany({
-      where: {
-        OR: [
-          { canonicalName: { contains: q, mode: 'insensitive' } },
-          { slug: { contains: q.toLowerCase() } },
-          { commonDescriptors: { has: q.toUpperCase() } },
-        ],
-      },
-      take: 10,
-      orderBy: { canonicalName: 'asc' },
-    });
+    // Search by canonical name or slug (PostgREST ilike)
+    const { data: merchants } = await db
+      .from('merchants')
+      .select('*')
+      .or(`canonical_name.ilike.%${q}%,slug.ilike.%${q.toLowerCase()}%`)
+      .order('canonical_name', { ascending: true })
+      .limit(10);
 
-    return reply.send({ merchants });
+    return reply.send({ merchants: merchants ?? [] });
   });
 }

@@ -55,10 +55,14 @@ class ApiClient {
   }
 
   post<T>(path: string, body?: unknown) {
-    return this.request<T>(path, {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    const options: RequestInit = { method: 'POST' };
+    if (body !== undefined && body !== null) {
+      options.body = JSON.stringify(body);
+    } else {
+      // Send empty JSON object to avoid Fastify's empty body error
+      options.body = JSON.stringify({});
+    }
+    return this.request<T>(path, options);
   }
 
   patch<T>(path: string, body: unknown) {

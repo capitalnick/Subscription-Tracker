@@ -1,13 +1,20 @@
 import { View } from 'react-native';
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useEffect } from 'react';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
 }
 
 export function ProgressBar({ progress }: ProgressBarProps) {
+  const animatedProgress = useSharedValue(0);
+
+  useEffect(() => {
+    animatedProgress.value = withTiming(progress, { duration: 300 });
+  }, [progress]);
+
   const animatedStyle = useAnimatedStyle(() => ({
-    width: `${withTiming(progress * 100, { duration: 300 })}%`,
+    width: `${animatedProgress.value * 100}%`,
   }));
 
   const percent = Math.round(progress * 100);

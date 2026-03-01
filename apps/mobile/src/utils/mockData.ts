@@ -9,23 +9,23 @@ import type {
 // ─── Merchants ───────────────────────────────────────────────
 
 export const mockMerchants: Merchant[] = [
-  { id: 'm1', canonicalName: 'Netflix', slug: 'netflix', category: 'Entertainment', commonDescriptors: ['NETFLIX'], websiteUrl: 'https://www.netflix.com', logoLetter: 'N', logoColor: '#E50914' },
-  { id: 'm2', canonicalName: 'Spotify', slug: 'spotify', category: 'Music', commonDescriptors: ['SPOTIFY'], websiteUrl: 'https://www.spotify.com', logoLetter: 'S', logoColor: '#1DB954' },
-  { id: 'm3', canonicalName: 'Adobe Creative Cloud', slug: 'adobe-creative-cloud', category: 'Productivity', commonDescriptors: ['ADOBE'], websiteUrl: 'https://www.adobe.com', logoLetter: 'A', logoColor: '#FF0000' },
-  { id: 'm4', canonicalName: 'iCloud+', slug: 'icloud-plus', category: 'Cloud', commonDescriptors: ['ICLOUD'], websiteUrl: 'https://www.icloud.com', logoLetter: 'i', logoColor: '#3693F5' },
-  { id: 'm5', canonicalName: 'ChatGPT Plus', slug: 'chatgpt-plus', category: 'Productivity', commonDescriptors: ['OPENAI'], websiteUrl: 'https://chat.openai.com', logoLetter: 'C', logoColor: '#10A37F' },
-  { id: 'm6', canonicalName: 'YouTube Premium', slug: 'youtube-premium', category: 'Entertainment', commonDescriptors: ['YOUTUBE'], websiteUrl: 'https://www.youtube.com', logoLetter: 'Y', logoColor: '#FF0000' },
-  { id: 'm7', canonicalName: 'Stan', slug: 'stan', category: 'Entertainment', commonDescriptors: ['STAN'], websiteUrl: 'https://www.stan.com.au', logoLetter: 'S', logoColor: '#0072CE' },
-  { id: 'm8', canonicalName: 'Kayo Sports', slug: 'kayo-sports', category: 'Entertainment', commonDescriptors: ['KAYO'], websiteUrl: 'https://kayosports.com.au', logoLetter: 'K', logoColor: '#00C853' },
+  { id: 'm1', canonicalName: 'Netflix', slug: 'netflix', category: 'STREAMING_VIDEO', commonDescriptors: ['NETFLIX'], websiteUrl: 'https://www.netflix.com', logoUrl: null, logoLetter: 'N', logoColor: '#E50914', knownPlans: [] },
+  { id: 'm2', canonicalName: 'Spotify', slug: 'spotify', category: 'STREAMING_MUSIC', commonDescriptors: ['SPOTIFY'], websiteUrl: 'https://www.spotify.com', logoUrl: null, logoLetter: 'S', logoColor: '#1DB954', knownPlans: [] },
+  { id: 'm3', canonicalName: 'Adobe Creative Cloud', slug: 'adobe-creative-cloud', category: 'SOFTWARE_TOOLS', commonDescriptors: ['ADOBE'], websiteUrl: 'https://www.adobe.com', logoUrl: null, logoLetter: 'A', logoColor: '#FF0000', knownPlans: [] },
+  { id: 'm4', canonicalName: 'iCloud+', slug: 'icloud-plus', category: 'CLOUD_STORAGE', commonDescriptors: ['ICLOUD'], websiteUrl: 'https://www.icloud.com', logoUrl: null, logoLetter: 'i', logoColor: '#3693F5', knownPlans: [] },
+  { id: 'm5', canonicalName: 'ChatGPT Plus', slug: 'chatgpt-plus', category: 'SOFTWARE_TOOLS', commonDescriptors: ['OPENAI'], websiteUrl: 'https://chat.openai.com', logoUrl: null, logoLetter: 'C', logoColor: '#10A37F', knownPlans: [] },
+  { id: 'm6', canonicalName: 'YouTube Premium', slug: 'youtube-premium', category: 'STREAMING_VIDEO', commonDescriptors: ['YOUTUBE'], websiteUrl: 'https://www.youtube.com', logoUrl: null, logoLetter: 'Y', logoColor: '#FF0000', knownPlans: [] },
+  { id: 'm7', canonicalName: 'Stan', slug: 'stan', category: 'STREAMING_VIDEO', commonDescriptors: ['STAN'], websiteUrl: 'https://www.stan.com.au', logoUrl: null, logoLetter: 'S', logoColor: '#0072CE', knownPlans: [] },
+  { id: 'm8', canonicalName: 'Kayo Sports', slug: 'kayo-sports', category: 'STREAMING_VIDEO', commonDescriptors: ['KAYO'], websiteUrl: 'https://kayosports.com.au', logoUrl: null, logoLetter: 'K', logoColor: '#00C853', knownPlans: [] },
 ];
 
 // ─── Subscriptions (confirmed) ───────────────────────────────
 
 export const mockSubscriptions: Subscription[] = [
-  { id: 's1', userId: 'u1', merchantId: 'm1', merchant: mockMerchants[0], customName: null, displayName: 'Netflix', amount: 22.99, currency: 'AUD', frequency: 'monthly', category: 'Entertainment', nextBillingDate: '2026-03-15T00:00:00Z', isActive: true, logoColor: '#E50914', logoLetter: 'N', websiteUrl: 'https://www.netflix.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: 's2', userId: 'u1', merchantId: 'm2', merchant: mockMerchants[1], customName: null, displayName: 'Spotify', amount: 12.99, currency: 'AUD', frequency: 'monthly', category: 'Music', nextBillingDate: '2026-03-10T00:00:00Z', isActive: true, logoColor: '#1DB954', logoLetter: 'S', websiteUrl: 'https://www.spotify.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: 's3', userId: 'u1', merchantId: 'm3', merchant: mockMerchants[2], customName: null, displayName: 'Adobe Creative Cloud', amount: 79.99, currency: 'AUD', frequency: 'monthly', category: 'Productivity', nextBillingDate: '2026-03-20T00:00:00Z', isActive: true, logoColor: '#FF0000', logoLetter: 'A', websiteUrl: 'https://www.adobe.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-  { id: 's4', userId: 'u1', merchantId: 'm4', merchant: mockMerchants[3], customName: null, displayName: 'iCloud+', amount: 4.49, currency: 'AUD', frequency: 'monthly', category: 'Cloud', nextBillingDate: '2026-03-05T00:00:00Z', isActive: true, logoColor: '#3693F5', logoLetter: 'i', websiteUrl: 'https://www.icloud.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: 's1', userId: 'u1', merchantId: 'm1', merchant: mockMerchants[0], customName: null, displayName: 'Netflix', amount: 22.99, currency: 'AUD', frequency: 'monthly', category: 'STREAMING_VIDEO', nextBillingDate: '2026-03-15T00:00:00Z', isActive: true, detectedPlanId: null, planConfirmed: false, logoUrl: null, logoColor: '#E50914', logoLetter: 'N', websiteUrl: 'https://www.netflix.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: 's2', userId: 'u1', merchantId: 'm2', merchant: mockMerchants[1], customName: null, displayName: 'Spotify', amount: 12.99, currency: 'AUD', frequency: 'monthly', category: 'STREAMING_MUSIC', nextBillingDate: '2026-03-10T00:00:00Z', isActive: true, detectedPlanId: null, planConfirmed: false, logoUrl: null, logoColor: '#1DB954', logoLetter: 'S', websiteUrl: 'https://www.spotify.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: 's3', userId: 'u1', merchantId: 'm3', merchant: mockMerchants[2], customName: null, displayName: 'Adobe Creative Cloud', amount: 79.99, currency: 'AUD', frequency: 'monthly', category: 'SOFTWARE_TOOLS', nextBillingDate: '2026-03-20T00:00:00Z', isActive: true, detectedPlanId: null, planConfirmed: false, logoUrl: null, logoColor: '#FF0000', logoLetter: 'A', websiteUrl: 'https://www.adobe.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+  { id: 's4', userId: 'u1', merchantId: 'm4', merchant: mockMerchants[3], customName: null, displayName: 'iCloud+', amount: 4.49, currency: 'AUD', frequency: 'monthly', category: 'CLOUD_STORAGE', nextBillingDate: '2026-03-05T00:00:00Z', isActive: true, detectedPlanId: null, planConfirmed: false, logoUrl: null, logoColor: '#3693F5', logoLetter: 'i', websiteUrl: 'https://www.icloud.com', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
 ];
 
 // ─── Detected Items (review queue) ──────────────────────────
@@ -42,10 +42,10 @@ export const mockDetectedItems: DetectedItem[] = [
 // ─── Dashboard Data ─────────────────────────────────────────
 
 export const mockCategoryBreakdown: CategoryBreakdown[] = [
-  { name: 'Entertainment', value: 35.98, color: '#3EB489' },
-  { name: 'Productivity', value: 79.99, color: '#6366F1' },
-  { name: 'Cloud', value: 4.49, color: '#3693F5' },
-  { name: 'Music', value: 12.99, color: '#1DB954' },
+  { name: 'STREAMING_VIDEO', value: 35.98, color: '#E63946' },
+  { name: 'SOFTWARE_TOOLS', value: 79.99, color: '#3D405B' },
+  { name: 'CLOUD_STORAGE', value: 4.49, color: '#00B4D8' },
+  { name: 'STREAMING_MUSIC', value: 12.99, color: '#9B5DE5' },
 ];
 
 const totalMonthly = mockSubscriptions.reduce((sum, s) => sum + s.amount, 0);

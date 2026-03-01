@@ -10,7 +10,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Check, X, AlertTriangle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { MerchantLogo } from '@/components/ui/MerchantLogo';
+import { MerchantIcon } from '@/components/ui/MerchantIcon';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import type { DetectedItem } from '@/types';
 
@@ -104,10 +104,10 @@ export function ReviewCard({ item, status, onConfirm, onDismiss, index }: Review
 
   const opacity = status === 'DISMISSED' ? 'opacity-50' : 'opacity-100';
 
-  const category = item.merchant?.category ?? 'Other';
-  const logoColor = item.merchant?.logoColor ?? '#9CA3AF';
-  const logoLetter = item.merchant?.logoLetter ?? '?';
-  const websiteUrl = item.merchant?.websiteUrl ?? null;
+  const category = item.merchant?.category ?? 'OTHER';
+
+  // Display: use merchant canonical name if matched, otherwise AI merchant name
+  const displayName = item.merchant?.canonicalName ?? item.aiMerchantName ?? 'Unknown';
 
   return (
     <Animated.View
@@ -148,11 +148,11 @@ export function ReviewCard({ item, status, onConfirm, onDismiss, index }: Review
 
           {/* Main Row */}
           <View className="flex-row items-center gap-3">
-            <MerchantLogo
-              websiteUrl={websiteUrl}
-              logoLetter={logoLetter}
-              logoColor={logoColor}
+            <MerchantIcon
+              merchant={item.merchant}
+              fallbackCategory={category}
               size={48}
+              merchantName={displayName}
             />
 
             <View className="flex-1 min-w-0">
@@ -161,7 +161,7 @@ export function ReviewCard({ item, status, onConfirm, onDismiss, index }: Review
                 numberOfLines={1}
                 style={{ fontWeight: '600' }}
               >
-                {item.aiMerchantName ?? 'Unknown'}
+                {displayName}
               </Text>
               <View className="flex-row items-center gap-2 mt-0.5">
                 <CategoryBadge category={category} />
@@ -187,7 +187,7 @@ export function ReviewCard({ item, status, onConfirm, onDismiss, index }: Review
               <Pressable
                 onPress={handleConfirmPress}
                 accessibilityRole="button"
-                accessibilityLabel={`Confirm ${item.aiMerchantName ?? 'subscription'}`}
+                accessibilityLabel={`Confirm ${displayName}`}
                 className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-sm-btn bg-mint active:bg-mint-active"
               >
                 <Check size={16} color="#FFFFFF" />
@@ -198,7 +198,7 @@ export function ReviewCard({ item, status, onConfirm, onDismiss, index }: Review
               <Pressable
                 onPress={handleDismissPress}
                 accessibilityRole="button"
-                accessibilityLabel={`Dismiss ${item.aiMerchantName ?? 'subscription'}`}
+                accessibilityLabel={`Dismiss ${displayName}`}
                 className="flex-1 flex-row items-center justify-center gap-1.5 py-2 rounded-sm-btn bg-surface-divider active:bg-surface-border"
               >
                 <X size={16} color="#6B7280" />

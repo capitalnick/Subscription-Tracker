@@ -1,6 +1,7 @@
 import { View, Text } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import type { CategoryBreakdown } from '@/types';
+import { getCategoryLabel } from '@/utils/constants';
 
 interface CategoryChartProps {
   data: CategoryBreakdown[];
@@ -10,7 +11,7 @@ export function CategoryChart({ data }: CategoryChartProps) {
   const pieData = data.map((cat) => ({
     value: cat.value,
     color: cat.color,
-    text: cat.name,
+    text: getCategoryLabel(cat.name),
   }));
 
   return (
@@ -54,7 +55,7 @@ export function CategoryChart({ data }: CategoryChartProps) {
                   className="text-[13px] text-text-body"
                   style={{ fontWeight: '500' }}
                 >
-                  {cat.name}
+                  {getCategoryLabel(cat.name)}
                 </Text>
               </View>
               <Text

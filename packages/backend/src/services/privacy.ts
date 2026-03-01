@@ -1,27 +1,29 @@
-import { prisma } from '../lib/prisma.js';
+import { getAdminClient } from '../lib/supabase.js';
 
 /**
  * Atomically purge all AI-extracted fields from a detected item
  * after user review (confirm/dismiss/merge).
- * This is the core privacy mechanism — no PII persists after review.
  */
 export async function purgeAiFields(
   itemId: string,
   newStatus: 'CONFIRMED' | 'DISMISSED' | 'MERGED',
 ) {
-  await prisma.detectedItem.update({
-    where: { id: itemId },
-    data: {
+  const db = getAdminClient();
+
+  await db
+    .from('detected_items')
+    .update({
       status: newStatus,
-      aiMerchantName: null,
-      aiAmount: null,
-      aiCurrency: null,
-      aiFrequency: null,
-      aiDetectedDate: null,
-      aiNextBilling: null,
-      aiConfidence: null,
-      aiNotes: null,
-      aiFieldsPurgedAt: new Date(),
-    },
-  });
+      ai_merchant_name: null,
+      ai_amount: null,
+      ai_currency: null,
+      ai_frequency: null,
+      ai_detected_date: null,
+      ai_next_billing: null,
+      ai_confidence: null,
+      ai_notes: null,
+      ai_fields_purged_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', itemId);
 }

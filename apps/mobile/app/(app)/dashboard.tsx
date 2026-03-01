@@ -38,12 +38,13 @@ export default function DashboardScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-surface-bg">
+      <View className="flex-1" style={{ backgroundColor: '#F0FBF6' }}>
+        <View style={{ height: insets.top, backgroundColor: '#F0FBF6' }} />
         <LinearGradient
           colors={['#F0FBF6', '#E8F8F0']}
           className="px-5 pb-8"
           style={{
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             borderBottomLeftRadius: 24,
             borderBottomRightRadius: 24,
           }}
@@ -90,7 +91,7 @@ export default function DashboardScreen() {
 
   if (isError || !data) {
     return (
-      <View className="flex-1 bg-surface-bg items-center justify-center px-5">
+      <View className="flex-1 bg-surface-bg items-center justify-center px-5" style={{ paddingTop: insets.top }}>
         <View className="w-16 h-16 rounded-full bg-error/10 items-center justify-center mb-4">
           <WifiOff size={28} color="#F87171" />
         </View>
@@ -115,7 +116,9 @@ export default function DashboardScreen() {
   const { totalMonthly, totalAnnual, activeCount, categoryBreakdown, subscriptions } = data;
 
   return (
-    <View className="flex-1 bg-surface-bg">
+    <View className="flex-1" style={{ backgroundColor: '#F0FBF6' }}>
+      <View style={{ height: insets.top, backgroundColor: '#F0FBF6' }} />
+      <View className="flex-1 bg-surface-bg">
       <FeedbackToast
         {...toast}
         onClose={() => setToast((t) => ({ ...t, visible: false }))}
@@ -133,7 +136,7 @@ export default function DashboardScreen() {
           colors={['#F0FBF6', '#E8F8F0']}
           className="px-5 pb-8"
           style={{
-            paddingTop: insets.top + 16,
+            paddingTop: 16,
             borderBottomLeftRadius: 24,
             borderBottomRightRadius: 24,
           }}
@@ -222,6 +225,7 @@ export default function DashboardScreen() {
 
       {/* FAB */}
       <FAB onPress={() => router.push('/(app)/ingest')} />
+      </View>
     </View>
   );
 }

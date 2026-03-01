@@ -2,21 +2,39 @@ import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ArrowLeft, Calendar, CreditCard, Tag, Clock, Pencil, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Calendar, CreditCard, Tag, Clock, Pencil, Trash2, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { MerchantLogo } from '@/components/ui/MerchantLogo';
+import { MerchantIcon } from '@/components/ui/MerchantIcon';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { MintButton } from '@/components/ui/MintButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useSubscription, useDeleteSubscription } from '@/hooks/useSubscriptions';
 import { frequencyLabel } from '@/utils/format';
 import { format } from 'date-fns';
+import type { MerchantPlan, PlanType } from '@/types/models';
+import { useMemo } from 'react';
+
+const PLAN_TYPE_STYLES: Record<PlanType, { label: string; bg: string; text: string }> = {
+  INDIVIDUAL: { label: 'Individual', bg: '#E5E7EB', text: '#374151' },
+  DUO: { label: 'Duo', bg: '#E5E7EB', text: '#374151' },
+  FAMILY: { label: 'Family', bg: '#DBEAFE', text: '#1D4ED8' },
+  STUDENT: { label: 'Student', bg: '#D1FAE5', text: '#065F46' },
+  BUSINESS: { label: 'Business', bg: '#EDE9FE', text: '#5B21B6' },
+  ENTERPRISE: { label: 'Enterprise', bg: '#1F2937', text: '#F9FAFB' },
+};
 
 export default function SubscriptionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { data: subscription, isLoading, isError } = useSubscription(id);
   const deleteMutation = useDeleteSubscription();
+
+  // Resolve detected plan from merchant's known_plans
+  const detectedPlan = useMemo(() => {
+    if (!subscription?.detectedPlanId || !subscription?.merchant?.knownPlans) return null;
+    const plans = subscription.merchant.knownPlans as MerchantPlan[];
+    return plans.find((p) => p.id === subscription.detectedPlanId) ?? null;
+  }, [subscription?.detectedPlanId, subscription?.merchant?.knownPlans]);
 
   const handleDelete = () => {
     if (!subscription) return;
@@ -106,11 +124,15 @@ export default function SubscriptionDetailScreen() {
           entering={FadeInDown.duration(400)}
           className="items-center pt-6 pb-8"
         >
-          <MerchantLogo
+          <MerchantIcon
+            merchant={subscription.merchant}
+            logoUrl={subscription.logoUrl}
             websiteUrl={subscription.websiteUrl}
             logoLetter={subscription.logoLetter}
             logoColor={subscription.logoColor}
+            fallbackCategory={subscription.category}
             size={80}
+            merchantName={subscription.displayName}
           />
           <Text
             className="text-[22px] text-text-primary mt-4"
@@ -121,6 +143,42 @@ export default function SubscriptionDetailScreen() {
           <View className="mt-2">
             <CategoryBadge category={subscription.category} />
           </View>
+
+          {/* Plan Badge */}
+          {detectedPlan && (
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(100)}
+              className="mt-3"
+            >
+              <View className="flex-row items-center gap-2 flex-wrap justify-center">
+                <View
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: '#F0FBF6' }}
+                >
+                  <Text className="text-[13px] text-mint" style={{ fontWeight: '600' }}>
+                    {detectedPlan.label}
+                  </Text>
+                </View>
+                {detectedPlan.planType && (
+                  <PlanTypeBadge planType={detectedPlan.planType as PlanType} />
+                )}
+                {detectedPlan.features.map((f) => (
+                  <View key={f} className="px-2 py-0.5 rounded-full bg-surface-muted">
+                    <Text className="text-[11px] text-text-secondary">{f}</Text>
+                  </View>
+                ))}
+              </View>
+              {!subscription.planConfirmed && (
+                <View className="flex-row items-center justify-center gap-2 mt-2">
+                  <Text className="text-[11px] text-text-muted">Auto-detected</Text>
+                  <Pressable className="flex-row items-center gap-1">
+                    <Check size={12} color="#3EB489" />
+                    <Text className="text-[11px] text-mint" style={{ fontWeight: '600' }}>Confirm</Text>
+                  </Pressable>
+                </View>
+              )}
+            </Animated.View>
+          )}
         </Animated.View>
 
         {/* Amount Card */}
@@ -194,6 +252,18 @@ export default function SubscriptionDetailScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
+    </View>
+  );
+}
+
+function PlanTypeBadge({ planType }: { planType: PlanType }) {
+  const style = PLAN_TYPE_STYLES[planType];
+  if (!style) return null;
+  return (
+    <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: style.bg }}>
+      <Text className="text-[11px]" style={{ fontWeight: '600', color: style.text }}>
+        {style.label}
+      </Text>
     </View>
   );
 }

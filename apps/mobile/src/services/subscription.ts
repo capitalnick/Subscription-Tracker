@@ -15,7 +15,8 @@ export async function fetchSubscriptions(
 }
 
 export async function fetchSubscription(id: string): Promise<Subscription> {
-  return api.get<Subscription>(`/v1/subscriptions/${id}`);
+  const res = await api.get<{ subscription: Subscription }>(`/v1/subscriptions/${id}`);
+  return res.subscription;
 }
 
 export async function updateSubscription(

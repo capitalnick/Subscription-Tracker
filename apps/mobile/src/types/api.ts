@@ -55,6 +55,8 @@ export interface UpdateSubscriptionRequest {
   frequency?: SubscriptionFrequency;
   category?: SubscriptionCategory;
   isActive?: boolean;
+  detectedPlanId?: string | null;
+  planConfirmed?: boolean;
 }
 
 // Merchants

@@ -4,7 +4,6 @@ import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
 import { ZodError } from 'zod';
 import { config } from './config.js';
-import { prisma } from './lib/prisma.js';
 import { authRoutes } from './routes/auth.js';
 import { ingestRoutes } from './routes/ingest.js';
 import { queueRoutes } from './routes/queue.js';
@@ -33,7 +32,17 @@ await app.register(multipart, {
   },
 });
 
-// Global error handler — catches Zod validation errors, Prisma errors, etc.
+// Allow empty JSON bodies (mobile app sends POST with no body for confirm/dismiss)
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+  try {
+    const str = (body as string).trim();
+    done(null, str ? JSON.parse(str) : {});
+  } catch (err) {
+    done(err as Error, undefined);
+  }
+});
+
+// Global error handler
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof ZodError) {
     return reply.status(400).send({
@@ -44,23 +53,6 @@ app.setErrorHandler((error, request, reply) => {
         message: e.message,
       })),
     });
-  }
-
-  // Prisma known request errors (e.g., unique constraint violation)
-  if (error.name === 'PrismaClientKnownRequestError') {
-    const prismaError = error as any;
-    if (prismaError.code === 'P2002') {
-      return reply.status(409).send({
-        statusCode: 409,
-        message: 'A record with this value already exists',
-      });
-    }
-    if (prismaError.code === 'P2025') {
-      return reply.status(404).send({
-        statusCode: 404,
-        message: 'Record not found',
-      });
-    }
   }
 
   // Rate limit errors
@@ -96,7 +88,6 @@ await app.register(merchantRoutes, { prefix: '/v1/merchants' });
 // Graceful shutdown
 const shutdown = async () => {
   await app.close();
-  await prisma.$disconnect();
   process.exit(0);
 };
 

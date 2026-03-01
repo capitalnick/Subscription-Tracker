@@ -45,6 +45,8 @@ export const updateSubscriptionSchema = z.object({
   category: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
   nextBillingDate: z.string().datetime().optional().nullable(),
+  detectedPlanId: z.string().optional().nullable(),
+  planConfirmed: z.boolean().optional(),
 });
 
 // Pagination

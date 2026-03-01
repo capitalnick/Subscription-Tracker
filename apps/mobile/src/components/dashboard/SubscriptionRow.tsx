@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
-import { MerchantLogo } from '@/components/ui/MerchantLogo';
+import { MerchantIcon } from '@/components/ui/MerchantIcon';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import type { Subscription } from '@/types';
 import { frequencyLabel } from '@/utils/format';
@@ -29,11 +29,15 @@ export const SubscriptionRow = memo(function SubscriptionRow({ subscription, ind
           elevation: 1,
         }}
       >
-        <MerchantLogo
+        <MerchantIcon
+          merchant={subscription.merchant}
+          logoUrl={subscription.logoUrl}
           websiteUrl={subscription.websiteUrl}
           logoLetter={subscription.logoLetter}
           logoColor={subscription.logoColor}
+          fallbackCategory={subscription.category}
           size={48}
+          merchantName={subscription.displayName}
         />
 
         <View className="flex-1 min-w-0">
