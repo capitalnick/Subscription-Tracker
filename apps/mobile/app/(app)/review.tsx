@@ -1,7 +1,8 @@
-import { useCallback } from 'react';
-import { View, Text, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
+import { useCallback, useState } from 'react';
+import { View, Text, FlatList, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { WifiOff, Inbox, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -12,7 +13,6 @@ import { MintButton } from '@/components/ui/MintButton';
 import { FeedbackToast } from '@/components/ui/FeedbackToast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useQueue, useConfirmItem, useDismissItem } from '@/hooks/useQueue';
-import { useState } from 'react';
 
 export default function ReviewScreen() {
   const { data, isLoading, isError, refetch } = useQueue();
@@ -65,10 +65,12 @@ export default function ReviewScreen() {
     router.push('/(app)/dashboard');
   };
 
+  const insets = useSafeAreaInsets();
+
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-surface-bg">
-        <View className="px-5 pt-4 pb-4">
+      <View className="flex-1 bg-surface-bg" style={{ paddingTop: insets.top + 8 }}>
+        <View className="px-5 pb-4">
           <StepIndicator current={2} total={3} />
           <Skeleton width="70%" height={32} style={{ marginTop: 8 }} />
           <Skeleton width="90%" height={16} style={{ marginTop: 12 }} />
@@ -79,13 +81,13 @@ export default function ReviewScreen() {
             <Skeleton key={i} height={120} borderRadius={16} />
           ))}
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-surface-bg items-center justify-center px-5">
+      <View className="flex-1 bg-surface-bg items-center justify-center px-5" style={{ paddingTop: insets.top }}>
         <View className="w-16 h-16 rounded-full bg-error/10 items-center justify-center mb-4">
           <WifiOff size={28} color="#F87171" />
         </View>
@@ -96,13 +98,13 @@ export default function ReviewScreen() {
           We couldn't load your review queue.{'\n'}Check your connection and try again.
         </Text>
         <MintButton onPress={() => refetch()}>Retry</MintButton>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (total === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-surface-bg items-center justify-center px-5">
+      <View className="flex-1 bg-surface-bg items-center justify-center px-5" style={{ paddingTop: insets.top }}>
         <View className="w-16 h-16 rounded-full bg-mint/10 items-center justify-center mb-4">
           <Inbox size={28} color="#3EB489" />
         </View>
@@ -113,19 +115,19 @@ export default function ReviewScreen() {
           Import a statement or screenshot to get started.
         </Text>
         <MintButton onPress={() => router.push('/(app)/ingest')}>Import</MintButton>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-bg">
+    <View className="flex-1 bg-surface-bg" style={{ paddingTop: insets.top }}>
       <FeedbackToast
         {...toast}
         onClose={() => setToast((t) => ({ ...t, visible: false }))}
       />
 
       {/* Header */}
-      <View className="px-5 pt-4 pb-4">
+      <View className="px-5 pt-2 pb-4">
         <Animated.View entering={FadeInDown.duration(400)}>
           <StepIndicator current={2} total={3} />
           <Text
@@ -156,7 +158,7 @@ export default function ReviewScreen() {
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 80 }}
         windowSize={7}
         maxToRenderPerBatch={8}
         initialNumToRender={6}
@@ -176,12 +178,13 @@ export default function ReviewScreen() {
       <BlurView
         intensity={90}
         tint="light"
-        className="absolute bottom-0 left-0 right-0 border-t border-surface-border px-5 py-4 pb-8"
+        className="absolute bottom-0 left-0 right-0 border-t border-surface-border px-5 py-4"
+        style={{ paddingBottom: insets.bottom + 8 }}
       >
         <MintButton fullWidth disabled={!allReviewed} onPress={handleContinue}>
           See my dashboard
         </MintButton>
       </BlurView>
-    </SafeAreaView>
+    </View>
   );
 }

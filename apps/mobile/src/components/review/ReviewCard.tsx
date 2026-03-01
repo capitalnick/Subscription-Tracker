@@ -56,6 +56,8 @@ export function ReviewCard({ item, status, onConfirm, onDismiss, index }: Review
 
   const swipeGesture = Gesture.Pan()
     .enabled(status === 'PENDING')
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-10, 10])
     .onUpdate((e) => {
       translateX.value = e.translationX;
     })
