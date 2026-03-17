@@ -2,8 +2,8 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'SubTracker',
-  slug: 'subscription-tracker',
+  name: 'SubTake',
+  slug: 'subtake',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -16,20 +16,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   assetBundlePatterns: ['**/*'],
   ios: {
     supportsTablet: false,
-    bundleIdentifier: 'com.subtracker.app',
+    bundleIdentifier: 'com.subtake.app',
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#3EB489',
     },
-    package: 'com.subtracker.app',
+    package: 'com.subtake.app',
   },
-  plugins: ['expo-router', 'expo-secure-store', 'expo-font'],
+  plugins: ['expo-router', 'expo-secure-store', 'expo-font', 'expo-auth-session', 'expo-crypto'],
   experiments: {
     typedRoutes: true,
   },
-  scheme: 'subtracker',
+  scheme: 'subtake',
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
