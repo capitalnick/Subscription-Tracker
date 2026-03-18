@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     package: 'com.subtake.app',
   },
-  plugins: ['expo-router', 'expo-secure-store', 'expo-font', 'expo-auth-session', 'expo-crypto'],
+  plugins: ['expo-router', 'expo-secure-store', 'expo-font'],
   experiments: {
     typedRoutes: true,
   },
