@@ -1,6 +1,5 @@
-import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import * as Crypto from 'expo-crypto';
 import { supabase } from '@/hooks/useSupabase';
 import { api } from './api';
 
@@ -82,68 +81,63 @@ export async function signInWithApple(): Promise<AuthResult> {
 }
 
 /**
- * Sign in with Google using expo-auth-session + Supabase signInWithIdToken.
+ * Sign in with Google via Supabase OAuth + expo-web-browser.
+ * Opens an in-app browser to Google's consent screen, Supabase handles
+ * the callback, and returns the session via deep link.
  */
 export async function signInWithGoogle(): Promise<AuthResult> {
   try {
-    const clientId = Platform.select({
-      ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-      android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-      default: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    });
-
-    if (!clientId) {
-      return { success: false, error: 'Google client ID not configured for this platform' };
-    }
-
-    // Generate PKCE nonce for Supabase verification
-    const rawNonce = Crypto.randomUUID();
-    const hashedBytes = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      rawNonce,
-    );
-
     const redirectUri = AuthSession.makeRedirectUri({ scheme: 'subtake' });
 
-    const discovery = {
-      authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-      tokenEndpoint: 'https://oauth2.googleapis.com/token',
-    };
-
-    const request = new AuthSession.AuthRequest({
-      clientId,
-      redirectUri,
-      scopes: ['openid', 'profile', 'email'],
-      responseType: AuthSession.ResponseType.IdToken,
-      extraParams: { nonce: hashedBytes },
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUri,
+        skipBrowserRedirect: true,
+      },
     });
 
-    const result = await request.promptAsync(discovery);
+    if (error || !data.url) {
+      return { success: false, error: error?.message ?? 'Failed to start Google sign-in' };
+    }
 
-    if (result.type !== 'success' || !result.params?.id_token) {
+    // Open the Supabase OAuth URL in an in-app browser
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+    if (result.type !== 'success' || !result.url) {
       if (result.type === 'cancel' || result.type === 'dismiss') {
         return { success: false, error: 'Sign-in cancelled' };
       }
       return { success: false, error: 'Google sign-in failed' };
     }
 
-    // Exchange the Google ID token with Supabase
-    const { data, error } = await supabase.auth.signInWithIdToken({
-      provider: 'google',
-      token: result.params.id_token,
-      nonce: rawNonce,
-    });
+    // Extract the session tokens from the redirect URL
+    const url = new URL(result.url);
+    // Supabase returns tokens as hash fragments: #access_token=...&refresh_token=...
+    const params = new URLSearchParams(url.hash.substring(1));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (!accessToken || !refreshToken) {
+      return { success: false, error: 'No tokens returned from Google sign-in' };
     }
 
-    // Register profile in backend (same as email signup)
-    if (data.user) {
+    // Set the session in Supabase
+    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    if (sessionError) {
+      return { success: false, error: sessionError.message };
+    }
+
+    // Register profile in backend
+    if (sessionData.user) {
       try {
         await api.post('/v1/auth/register-profile', {
-          supabaseId: data.user.id,
-          email: data.user.email,
+          supabaseId: sessionData.user.id,
+          email: sessionData.user.email,
         });
       } catch {
         // Non-fatal
