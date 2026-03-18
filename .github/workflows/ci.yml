@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-lint:
+    name: Backend Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: cd packages/backend && npx prisma generate
+
+      - name: TypeScript check
+        run: cd packages/backend && npx tsc --noEmit
+
+      - name: ESLint
+        run: cd packages/backend && npx eslint .
+
+      - name: Run tests
+        run: cd packages/backend && npm test --if-present
+
+  mobile-lint:
+    name: Mobile Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo lint
+        run: cd apps/mobile && npx expo lint
