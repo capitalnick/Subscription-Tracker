@@ -1,4 +1,5 @@
 import { getAdminClient } from '../lib/supabase.js';
+import { prisma } from '../lib/prisma.js';
 import { config } from '../config.js';
 
 /**
@@ -43,11 +44,11 @@ export async function fetchAndStoreLogo(
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Supabase Storage
-    const db = getAdminClient();
+    // Upload to Supabase Storage (keep using Supabase for blob storage)
+    const supabase = getAdminClient();
     const filePath = `${merchantId}.png`;
 
-    const { error: uploadError } = await db.storage
+    const { error: uploadError } = await supabase.storage
       .from('merchant-logos')
       .upload(filePath, buffer, {
         contentType: 'image/png',
@@ -60,17 +61,17 @@ export async function fetchAndStoreLogo(
     }
 
     // Get public URL
-    const { data: publicUrlData } = db.storage
+    const { data: publicUrlData } = supabase.storage
       .from('merchant-logos')
       .getPublicUrl(filePath);
 
     const publicUrl = publicUrlData.publicUrl;
 
-    // Update merchant record
-    await db
-      .from('merchants')
-      .update({ logo_url: publicUrl })
-      .eq('id', merchantId);
+    // Update merchant record via Prisma
+    await prisma.merchant.update({
+      where: { id: merchantId },
+      data: { logoUrl: publicUrl },
+    });
 
     return publicUrl;
   } catch (error) {

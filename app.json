@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Subtake",
+    "slug": "subtake",
+    "extra": {
+      "eas": {
+        "projectId": "a1ea4e9e-1dd3-4c92-b982-696885918d72"
+      }
+    },
+    "android": {
+      "package": "com.nicktrembath.subscriptiontracker"
+    }
+  }
+}

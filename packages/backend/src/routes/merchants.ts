@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { getAdminClient } from '../lib/supabase.js';
+import { prisma } from '../lib/prisma.js';
 import { merchantSearchSchema } from '../utils/validation.js';
 
 export async function merchantRoutes(app: FastifyInstance) {
@@ -11,16 +11,18 @@ export async function merchantRoutes(app: FastifyInstance) {
     }
 
     const { q } = result.data;
-    const db = getAdminClient();
 
-    // Search by canonical name or slug (PostgREST ilike)
-    const { data: merchants } = await db
-      .from('merchants')
-      .select('*')
-      .or(`canonical_name.ilike.%${q}%,slug.ilike.%${q.toLowerCase()}%`)
-      .order('canonical_name', { ascending: true })
-      .limit(10);
+    const merchants = await prisma.merchant.findMany({
+      where: {
+        OR: [
+          { canonicalName: { contains: q, mode: 'insensitive' } },
+          { slug: { contains: q.toLowerCase(), mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { canonicalName: 'asc' },
+      take: 10,
+    });
 
-    return reply.send({ merchants: merchants ?? [] });
+    return reply.send({ merchants });
   });
 }

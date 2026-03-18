@@ -10,13 +10,14 @@ interface MerchantSeed {
   websiteUrl: string | null;
   logoLetter: string;
   logoColor: string;
+  commonAmounts?: number[];
 }
 
 const merchants: MerchantSeed[] = [
   // Entertainment - Streaming
-  { canonicalName: 'Netflix', slug: 'netflix', category: 'Entertainment', commonDescriptors: ['NETFLIX.COM', 'NETFLIX', 'NETFLIX AU'], websiteUrl: 'https://www.netflix.com', logoLetter: 'N', logoColor: '#E50914' },
-  { canonicalName: 'Stan', slug: 'stan', category: 'Entertainment', commonDescriptors: ['STAN ENTERTAINMENT', 'STAN.COM.AU'], websiteUrl: 'https://www.stan.com.au', logoLetter: 'S', logoColor: '#0072CE' },
-  { canonicalName: 'Disney+', slug: 'disney-plus', category: 'Entertainment', commonDescriptors: ['DISNEY PLUS', 'DISNEYPLUS', 'DISNEY+'], websiteUrl: 'https://www.disneyplus.com', logoLetter: 'D', logoColor: '#113CCF' },
+  { canonicalName: 'Netflix', slug: 'netflix', category: 'Entertainment', commonDescriptors: ['NETFLIX.COM', 'NETFLIX', 'NETFLIX AU'], websiteUrl: 'https://www.netflix.com', logoLetter: 'N', logoColor: '#E50914', commonAmounts: [7.99, 18.99, 25.99] },
+  { canonicalName: 'Stan', slug: 'stan', category: 'Entertainment', commonDescriptors: ['STAN ENTERTAINMENT', 'STAN.COM.AU'], websiteUrl: 'https://www.stan.com.au', logoLetter: 'S', logoColor: '#0072CE', commonAmounts: [12.00, 17.00, 21.00] },
+  { canonicalName: 'Disney+', slug: 'disney-plus', category: 'Entertainment', commonDescriptors: ['DISNEY PLUS', 'DISNEYPLUS', 'DISNEY+'], websiteUrl: 'https://www.disneyplus.com', logoLetter: 'D', logoColor: '#113CCF', commonAmounts: [13.99, 17.99] },
   { canonicalName: 'Kayo Sports', slug: 'kayo-sports', category: 'Entertainment', commonDescriptors: ['KAYO', 'KAYO SPORTS', 'KAYOSPORTS'], websiteUrl: 'https://kayosports.com.au', logoLetter: 'K', logoColor: '#00C853' },
   { canonicalName: 'Binge', slug: 'binge', category: 'Entertainment', commonDescriptors: ['BINGE', 'BINGE.COM.AU'], websiteUrl: 'https://binge.com.au', logoLetter: 'B', logoColor: '#000000' },
   { canonicalName: 'Amazon Prime Video', slug: 'amazon-prime-video', category: 'Entertainment', commonDescriptors: ['AMAZON PRIME', 'PRIME VIDEO', 'AMZN PRIME'], websiteUrl: 'https://www.primevideo.com', logoLetter: 'A', logoColor: '#00A8E1' },
@@ -28,7 +29,7 @@ const merchants: MerchantSeed[] = [
   { canonicalName: 'Apple TV+', slug: 'apple-tv-plus', category: 'Entertainment', commonDescriptors: ['APPLE TV', 'APPLE.COM/BILL'], websiteUrl: 'https://tv.apple.com', logoLetter: 'A', logoColor: '#000000' },
 
   // Music
-  { canonicalName: 'Spotify', slug: 'spotify', category: 'Music', commonDescriptors: ['SPOTIFY', 'SPOTIFY AB', 'SPOTIFY PREMIUM'], websiteUrl: 'https://www.spotify.com', logoLetter: 'S', logoColor: '#1DB954' },
+  { canonicalName: 'Spotify', slug: 'spotify', category: 'Music', commonDescriptors: ['SPOTIFY', 'SPOTIFY AB', 'SPOTIFY PREMIUM'], websiteUrl: 'https://www.spotify.com', logoLetter: 'S', logoColor: '#1DB954', commonAmounts: [12.99, 13.99, 20.99] },
   { canonicalName: 'Apple Music', slug: 'apple-music', category: 'Music', commonDescriptors: ['APPLE MUSIC', 'APPLE.COM/BILL'], websiteUrl: 'https://music.apple.com', logoLetter: 'A', logoColor: '#FA233B' },
   { canonicalName: 'YouTube Music', slug: 'youtube-music', category: 'Music', commonDescriptors: ['YOUTUBE MUSIC', 'GOOGLE*YOUTUBEMUSIC'], websiteUrl: 'https://music.youtube.com', logoLetter: 'Y', logoColor: '#FF0000' },
   { canonicalName: 'Tidal', slug: 'tidal', category: 'Music', commonDescriptors: ['TIDAL', 'TIDAL.COM'], websiteUrl: 'https://tidal.com', logoLetter: 'T', logoColor: '#000000' },
@@ -36,8 +37,8 @@ const merchants: MerchantSeed[] = [
 
   // Productivity
   { canonicalName: 'Adobe Creative Cloud', slug: 'adobe-creative-cloud', category: 'Productivity', commonDescriptors: ['ADOBE', 'ADOBE SYSTEMS', 'ADOBE CREATIVE', 'ADOBE CC'], websiteUrl: 'https://www.adobe.com', logoLetter: 'A', logoColor: '#FF0000' },
-  { canonicalName: 'Microsoft 365', slug: 'microsoft-365', category: 'Productivity', commonDescriptors: ['MICROSOFT', 'MICROSOFT 365', 'MICROSOFT*OFFICE', 'MS 365'], websiteUrl: 'https://www.microsoft.com', logoLetter: 'M', logoColor: '#0078D4' },
-  { canonicalName: 'Canva', slug: 'canva', category: 'Productivity', commonDescriptors: ['CANVA', 'CANVA PTY', 'CANVA.COM'], websiteUrl: 'https://www.canva.com', logoLetter: 'C', logoColor: '#00C4CC' },
+  { canonicalName: 'Microsoft 365', slug: 'microsoft-365', category: 'Productivity', commonDescriptors: ['MICROSOFT', 'MICROSOFT 365', 'MICROSOFT*OFFICE', 'MS 365'], websiteUrl: 'https://www.microsoft.com', logoLetter: 'M', logoColor: '#0078D4', commonAmounts: [9.00, 12.00, 16.00] },
+  { canonicalName: 'Canva', slug: 'canva', category: 'Productivity', commonDescriptors: ['CANVA', 'CANVA PTY', 'CANVA.COM'], websiteUrl: 'https://www.canva.com', logoLetter: 'C', logoColor: '#00C4CC', commonAmounts: [19.99] },
   { canonicalName: 'Notion', slug: 'notion', category: 'Productivity', commonDescriptors: ['NOTION', 'NOTION LABS', 'NOTION.SO'], websiteUrl: 'https://www.notion.so', logoLetter: 'N', logoColor: '#000000' },
   { canonicalName: 'Figma', slug: 'figma', category: 'Productivity', commonDescriptors: ['FIGMA', 'FIGMA INC'], websiteUrl: 'https://www.figma.com', logoLetter: 'F', logoColor: '#F24E1E' },
   { canonicalName: 'Slack', slug: 'slack', category: 'Productivity', commonDescriptors: ['SLACK', 'SLACK TECHNOLOGIES'], websiteUrl: 'https://slack.com', logoLetter: 'S', logoColor: '#4A154B' },
@@ -55,8 +56,8 @@ const merchants: MerchantSeed[] = [
   { canonicalName: 'OneDrive', slug: 'onedrive', category: 'Cloud', commonDescriptors: ['ONEDRIVE', 'MICROSOFT ONEDRIVE'], websiteUrl: 'https://onedrive.live.com', logoLetter: 'O', logoColor: '#0078D4' },
 
   // AI / Tech
-  { canonicalName: 'ChatGPT Plus', slug: 'chatgpt-plus', category: 'Productivity', commonDescriptors: ['OPENAI', 'CHATGPT', 'OPENAI.COM'], websiteUrl: 'https://chat.openai.com', logoLetter: 'C', logoColor: '#10A37F' },
-  { canonicalName: 'Claude Pro', slug: 'claude-pro', category: 'Productivity', commonDescriptors: ['ANTHROPIC', 'CLAUDE', 'CLAUDE.AI'], websiteUrl: 'https://claude.ai', logoLetter: 'C', logoColor: '#D4A574' },
+  { canonicalName: 'ChatGPT Plus', slug: 'chatgpt-plus', category: 'Productivity', commonDescriptors: ['OPENAI', 'CHATGPT', 'OPENAI.COM'], websiteUrl: 'https://chat.openai.com', logoLetter: 'C', logoColor: '#10A37F', commonAmounts: [30.00] },
+  { canonicalName: 'Claude Pro', slug: 'claude-pro', category: 'Productivity', commonDescriptors: ['ANTHROPIC', 'CLAUDE', 'CLAUDE.AI'], websiteUrl: 'https://claude.ai', logoLetter: 'C', logoColor: '#D4A574', commonAmounts: [30.00] },
   { canonicalName: 'GitHub', slug: 'github', category: 'Productivity', commonDescriptors: ['GITHUB', 'GITHUB INC'], websiteUrl: 'https://github.com', logoLetter: 'G', logoColor: '#181717' },
   { canonicalName: 'Copilot', slug: 'github-copilot', category: 'Productivity', commonDescriptors: ['GITHUB COPILOT', 'COPILOT'], websiteUrl: 'https://github.com/features/copilot', logoLetter: 'C', logoColor: '#000000' },
 

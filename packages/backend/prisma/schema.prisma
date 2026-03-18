@@ -7,14 +7,56 @@ datasource db {
   url       = env("DATABASE_URL")
 }
 
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAUSED
+  TRIAL
+  EXPIRED
+}
+
+enum IngestionSource {
+  PDF
+  SCREENSHOT
+  EMAIL
+  MANUAL
+}
+
+enum IngestionStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DetectedItemStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+  MERGED
+}
+
+enum ChargeSource {
+  INGESTION
+  MANUAL
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
 model User {
-  id            String         @id @default(uuid())
-  supabaseId    String         @unique @map("supabase_id")
-  email         String         @unique
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  subscriptions Subscription[]
-  detectedItems DetectedItem[]
+  id                  String              @id @default(uuid())
+  supabaseId          String              @unique @map("supabase_id")
+  email               String              @unique
+  forwardingAddress   String?             @unique @map("forwarding_address")
+  currencyPreference  String              @default("AUD") @map("currency_preference")
+  timezone            String              @default("Australia/Sydney")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  subscriptions       Subscription[]
+  detectedItems       DetectedItem[]
+  ingestionEvents     IngestionEvent[]
+  subscriptionCharges SubscriptionCharge[]
 
   @@map("users")
 }
@@ -30,6 +72,8 @@ model Merchant {
   logoLetter        String         @map("logo_letter")
   logoColor         String         @map("logo_color")
   knownPlans        Json?          @map("known_plans") @db.JsonB // MerchantPlan[]
+  cancelUrl         String?        @map("cancel_url")
+  commonAmounts     Decimal[]      @map("common_amounts") @db.Decimal(10, 2)
   createdAt         DateTime       @default(now()) @map("created_at")
   subscriptions     Subscription[]
   detectedItems     DetectedItem[]
@@ -38,56 +82,130 @@ model Merchant {
 }
 
 model Subscription {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  merchantId      String?  @map("merchant_id")
-  customName      String?  @map("custom_name")
-  amount          Decimal  @db.Decimal(10, 2)
-  currency        String   @default("AUD")
-  frequency       String   // weekly | fortnightly | monthly | quarterly | annual
-  category        String   // STREAMING_VIDEO, STREAMING_MUSIC, etc.
-  nextBillingDate DateTime? @map("next_billing_date")
-  isActive        Boolean  @default(true) @map("is_active")
-  detectedPlanId  String?  @map("detected_plan_id")
-  planConfirmed   Boolean  @default(false) @map("plan_confirmed")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                 String             @id @default(uuid())
+  userId             String             @map("user_id")
+  merchantId         String?            @map("merchant_id")
+  customName         String?            @map("custom_name")
+  amount             Decimal            @db.Decimal(10, 2)
+  currency           String             @default("AUD")
+  frequency          String             // weekly | fortnightly | monthly | quarterly | annual
+  category           String             // STREAMING_VIDEO, STREAMING_MUSIC, etc.
+  nextBillingDate    DateTime?          @map("next_billing_date")
+  status             SubscriptionStatus @default(ACTIVE)
+  billingAnchor      Int?               @map("billing_anchor") // day of month (1-31)
+  lastChargedDate    DateTime?          @map("last_charged_date")
+  lastChargedAmount  Decimal?           @map("last_charged_amount") @db.Decimal(10, 2)
+  trialEndDate       DateTime?          @map("trial_end_date")
+  cancelledAt        DateTime?          @map("cancelled_at")
+  amountAud          Decimal?           @map("amount_aud") @db.Decimal(10, 2)
+  annualCostAud      Decimal?           @map("annual_cost_aud") @db.Decimal(10, 2)
+  notes              String?
+  isShared           Boolean            @default(false) @map("is_shared")
+  sharedMyPortion    Decimal?           @map("shared_my_portion") @db.Decimal(10, 2)
+  sourceIngestionIds String[]           @map("source_ingestion_ids")
+  detectedPlanId     String?            @map("detected_plan_id")
+  planConfirmed      Boolean            @default(false) @map("plan_confirmed")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  merchant Merchant? @relation(fields: [merchantId], references: [id])
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant Merchant?          @relation(fields: [merchantId], references: [id])
+  charges  SubscriptionCharge[]
 
+  @@index([userId, status])
   @@map("subscriptions")
 }
 
 model DetectedItem {
-  id               String   @id @default(uuid())
-  userId           String   @map("user_id")
-  ingestionMethod  String   @map("ingestion_method") // pdf | screenshot | email | manual
-  status           String   @default("PENDING") // PENDING | CONFIRMED | DISMISSED | MERGED
-  duplicate        Boolean  @default(false)
+  id                      String             @id @default(uuid())
+  userId                  String             @map("user_id")
+  ingestionMethod         String             @map("ingestion_method") // pdf | screenshot | email | manual
+  status                  DetectedItemStatus @default(PENDING)
+  duplicate               Boolean            @default(false)
 
   // AI-extracted fields — purged after review or after 30 days
-  aiMerchantName   String?  @map("ai_merchant_name")
-  aiAmount         Decimal? @map("ai_amount") @db.Decimal(10, 2)
-  aiCurrency       String?  @map("ai_currency")
-  aiFrequency      String?  @map("ai_frequency")
-  aiDetectedDate   String?  @map("ai_detected_date")
-  aiNextBilling    String?  @map("ai_next_billing")
-  aiConfidence     String?  @map("ai_confidence") // high | low
-  aiNotes          String?  @map("ai_notes")
-  aiFieldsPurgedAt DateTime? @map("ai_fields_purged_at")
+  aiMerchantName          String?            @map("ai_merchant_name")
+  aiAmount                Decimal?           @map("ai_amount") @db.Decimal(10, 2)
+  aiCurrency              String?            @map("ai_currency")
+  aiFrequency             String?            @map("ai_frequency")
+  aiDetectedDate          String?            @map("ai_detected_date")
+  aiNextBilling           String?            @map("ai_next_billing")
+  aiConfidence            String?            @map("ai_confidence") // high | low
+  aiNotes                 String?            @map("ai_notes")
+  aiFieldsPurgedAt        DateTime?          @map("ai_fields_purged_at")
 
   // Resolved merchant (after matching)
-  merchantId       String?  @map("merchant_id")
+  merchantId              String?            @map("merchant_id")
 
-  sourceHash       String?  @map("source_hash") // SHA-256 of uploaded file for dedup
-  rawDescriptor    String?  @map("raw_descriptor") // Original bank descriptor before normalisation
+  sourceHash              String?            @map("source_hash") // SHA-256 of uploaded file for dedup
+  rawDescriptor           String?            @map("raw_descriptor") // Original bank descriptor before normalisation
 
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  // Ingestion event tracking
+  ingestionEventId        String?            @map("ingestion_event_id")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  merchant Merchant? @relation(fields: [merchantId], references: [id])
+  // Duplicate detection
+  merchantMatchConfidence Float?             @map("merchant_match_confidence")
+  duplicateOf             String?            @map("duplicate_of") // ID of the existing DetectedItem/Subscription this duplicates
+  duplicateConfidence     Float?             @map("duplicate_confidence")
 
+  // User-confirmed overrides (preserved for prompt improvement)
+  confirmedMerchantName   String?            @map("confirmed_merchant_name")
+  confirmedAmount         Decimal?           @map("confirmed_amount") @db.Decimal(10, 2)
+  confirmedCurrency       String?            @map("confirmed_currency")
+  confirmedFrequency      String?            @map("confirmed_frequency")
+  confirmedNextBilling    DateTime?          @map("confirmed_next_billing")
+
+  // Link to created subscription
+  subscriptionId          String?            @map("subscription_id")
+  reviewedAt              DateTime?          @map("reviewed_at")
+
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant       Merchant?       @relation(fields: [merchantId], references: [id])
+  ingestionEvent IngestionEvent? @relation(fields: [ingestionEventId], references: [id])
+
+  @@index([userId, status])
   @@map("detected_items")
+}
+
+model IngestionEvent {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  source        IngestionSource
+  status        IngestionStatus @default(PROCESSING)
+  aiModel       String?         @map("ai_model")
+  aiCostUsd     Decimal?        @map("ai_cost_usd") @db.Decimal(10, 6)
+  itemsDetected Int             @default(0) @map("items_detected")
+  processingMs  Int?            @map("processing_ms")
+  sourceHash    String?         @map("source_hash")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  processedAt   DateTime?       @map("processed_at")
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  detectedItems DetectedItem[]
+
+  @@map("ingestion_events")
+}
+
+model SubscriptionCharge {
+  id               String       @id @default(uuid())
+  subscriptionId   String       @map("subscription_id")
+  userId           String       @map("user_id")
+  amount           Decimal      @db.Decimal(10, 2)
+  currency         String       @default("AUD")
+  amountAud        Decimal?     @map("amount_aud") @db.Decimal(10, 2)
+  chargedAt        DateTime     @map("charged_at")
+  source           ChargeSource @default(INGESTION)
+  ingestionEventId String?      @map("ingestion_event_id")
+  expectedAmount   Decimal?     @map("expected_amount") @db.Decimal(10, 2)
+  isPriceChange    Boolean      @default(false) @map("is_price_change")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, chargedAt])
+  @@map("subscription_charges")
 }

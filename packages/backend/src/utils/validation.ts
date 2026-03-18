@@ -43,10 +43,12 @@ export const updateSubscriptionSchema = z.object({
   amount: z.number().positive().optional(),
   frequency: z.enum(['weekly', 'fortnightly', 'monthly', 'quarterly', 'annual']).optional(),
   category: z.string().min(1).optional(),
-  isActive: z.boolean().optional(),
+  status: z.enum(['ACTIVE', 'CANCELLED', 'PAUSED', 'TRIAL', 'EXPIRED']).optional(),
+  isActive: z.boolean().optional(), // backward compat — maps to status
   nextBillingDate: z.string().datetime().optional().nullable(),
   detectedPlanId: z.string().optional().nullable(),
   planConfirmed: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
 });
 
 // Pagination

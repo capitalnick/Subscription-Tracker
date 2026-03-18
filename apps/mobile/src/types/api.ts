@@ -1,11 +1,11 @@
 import type {
   DashboardData,
   DetectedItem,
-  IngestionMethod,
   Merchant,
   Subscription,
   SubscriptionCategory,
   SubscriptionFrequency,
+  SubscriptionStatus,
 } from './models';
 
 // Auth
@@ -29,6 +29,7 @@ export interface AuthResponse {
 export interface IngestResponse {
   items: DetectedItem[];
   count: number;
+  ingestionEventId: string | null;
 }
 
 // Queue
@@ -54,9 +55,12 @@ export interface UpdateSubscriptionRequest {
   amount?: number;
   frequency?: SubscriptionFrequency;
   category?: SubscriptionCategory;
+  status?: SubscriptionStatus;
   isActive?: boolean;
+  nextBillingDate?: string | null;
   detectedPlanId?: string | null;
   planConfirmed?: boolean;
+  notes?: string | null;
 }
 
 // Merchants
@@ -72,6 +76,11 @@ export interface ManualEntryRequest {
   frequency: SubscriptionFrequency;
   category: SubscriptionCategory;
   nextBillingDate?: string;
+}
+
+// Account
+export interface DeleteAccountResponse {
+  deleted: boolean;
 }
 
 // Generic

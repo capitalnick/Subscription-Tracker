@@ -24,8 +24,22 @@ export const config = {
     token: process.env.LOGO_DEV_TOKEN ?? '',
   },
 
+  sendgrid: {
+    webhookVerificationKey: process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY ?? '',
+  },
+
+  appEnv: (process.env.APP_ENV ?? 'development') as 'development' | 'staging' | 'production',
+
   rateLimit: {
-    max: 100,
+    max: 200,
     timeWindow: '1 minute',
   },
 } as const;
+
+// Validate required environment variables
+const requiredVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+for (const varName of requiredVars) {
+  if (!process.env[varName]) {
+    throw new Error(`Missing required environment variable: ${varName}`);
+  }
+}

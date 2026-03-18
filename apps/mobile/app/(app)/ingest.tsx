@@ -142,17 +142,10 @@ export default function IngestScreen() {
         handlePickScreenshot();
         break;
       case 'email':
-        Alert.alert(
-          'Forward Your Email',
-          'Forward any subscription receipt or confirmation email to:\n\nimport@subtracker.app\n\nWe\'ll process it and add it to your review queue.',
-          [
-            { text: 'OK', onPress: () => router.push('/(app)/review') },
-          ],
-        );
+        router.push('/(app)/email-setup');
         break;
       case 'manual':
-        // TODO: Navigate to manual entry form
-        router.push('/(app)/review');
+        router.push('/(app)/manual-entry');
         break;
     }
   }, [selected, handlePickPdf, handlePickScreenshot]);

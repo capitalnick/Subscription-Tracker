@@ -1,5 +1,7 @@
+import { View } from 'react-native';
 import { Stack, Redirect } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
 export default function AppLayout() {
   const user = useAuthStore((s) => s.user);
@@ -16,12 +18,15 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#FAFBFC' },
-        animation: 'slide_from_right',
-      }}
-    />
+    <View style={{ flex: 1 }}>
+      <OfflineBanner />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#FAFBFC' },
+          animation: 'slide_from_right',
+        }}
+      />
+    </View>
   );
 }

@@ -1,18 +1,18 @@
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, TextInput, Modal } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ArrowLeft, Calendar, CreditCard, Tag, Clock, Pencil, Trash2, Check } from 'lucide-react-native';
+import { ArrowLeft, Calendar, CreditCard, Tag, Clock, Pencil, Trash2, Check, X, FileText } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { MerchantIcon } from '@/components/ui/MerchantIcon';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { MintButton } from '@/components/ui/MintButton';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { useSubscription, useDeleteSubscription } from '@/hooks/useSubscriptions';
+import { useSubscription, useDeleteSubscription, useUpdateSubscription } from '@/hooks/useSubscriptions';
 import { frequencyLabel } from '@/utils/format';
 import { format } from 'date-fns';
-import type { MerchantPlan, PlanType } from '@/types/models';
-import { useMemo } from 'react';
+import type { MerchantPlan, PlanType, SubscriptionFrequency, SubscriptionStatus } from '@/types/models';
+import { useMemo, useState } from 'react';
 
 const PLAN_TYPE_STYLES: Record<PlanType, { label: string; bg: string; text: string }> = {
   INDIVIDUAL: { label: 'Individual', bg: '#E5E7EB', text: '#374151' },
@@ -23,11 +23,29 @@ const PLAN_TYPE_STYLES: Record<PlanType, { label: string; bg: string; text: stri
   ENTERPRISE: { label: 'Enterprise', bg: '#1F2937', text: '#F9FAFB' },
 };
 
+const FREQUENCIES: SubscriptionFrequency[] = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'annual'];
+const STATUSES: { value: SubscriptionStatus; label: string; color: string }[] = [
+  { value: 'ACTIVE', label: 'Active', color: '#3EB489' },
+  { value: 'PAUSED', label: 'Paused', color: '#F59E0B' },
+  { value: 'CANCELLED', label: 'Cancelled', color: '#F87171' },
+  { value: 'TRIAL', label: 'Trial', color: '#3B82F6' },
+];
+
 export default function SubscriptionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { data: subscription, isLoading, isError } = useSubscription(id);
   const deleteMutation = useDeleteSubscription();
+  const updateMutation = useUpdateSubscription();
+  const [editVisible, setEditVisible] = useState(false);
+
+  // Edit form state
+  const [editName, setEditName] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editFrequency, setEditFrequency] = useState<SubscriptionFrequency>('monthly');
+  const [editStatus, setEditStatus] = useState<SubscriptionStatus>('ACTIVE');
+  const [editNextBilling, setEditNextBilling] = useState('');
+  const [editNotes, setEditNotes] = useState('');
 
   // Resolve detected plan from merchant's known_plans
   const detectedPlan = useMemo(() => {
@@ -35,6 +53,45 @@ export default function SubscriptionDetailScreen() {
     const plans = subscription.merchant.knownPlans as MerchantPlan[];
     return plans.find((p) => p.id === subscription.detectedPlanId) ?? null;
   }, [subscription?.detectedPlanId, subscription?.merchant?.knownPlans]);
+
+  const openEdit = () => {
+    if (!subscription) return;
+    setEditName(subscription.customName ?? subscription.displayName);
+    setEditAmount(subscription.amount.toFixed(2));
+    setEditFrequency(subscription.frequency);
+    setEditStatus(subscription.status);
+    setEditNextBilling(subscription.nextBillingDate ?? '');
+    setEditNotes(subscription.notes ?? '');
+    setEditVisible(true);
+  };
+
+  const handleSave = () => {
+    if (!subscription) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    updateMutation.mutate(
+      {
+        id: subscription.id,
+        data: {
+          customName: editName || undefined,
+          amount: parseFloat(editAmount) || undefined,
+          frequency: editFrequency,
+          status: editStatus,
+          nextBillingDate: editNextBilling || null,
+          notes: editNotes || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditVisible(false);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        },
+        onError: (error) => {
+          Alert.alert('Error', (error as { message?: string }).message ?? 'Failed to update');
+        },
+      },
+    );
+  };
 
   const handleDelete = () => {
     if (!subscription) return;
@@ -100,6 +157,9 @@ export default function SubscriptionDetailScreen() {
     ? format(new Date(subscription.nextBillingDate), 'd MMM yyyy')
     : 'Not set';
 
+  const statusLabel = STATUSES.find((s) => s.value === subscription.status)?.label ?? subscription.status;
+  const statusColor = STATUSES.find((s) => s.value === subscription.status)?.color ?? '#6B7280';
+
   return (
     <View className="flex-1 bg-surface-bg" style={{ paddingTop: insets.top }}>
       {/* Header */}
@@ -113,7 +173,7 @@ export default function SubscriptionDetailScreen() {
         >
           Subscription
         </Text>
-        <Pressable hitSlop={12}>
+        <Pressable onPress={openEdit} hitSlop={12}>
           <Pencil size={20} color="#3EB489" />
         </Pressable>
       </View>
@@ -226,9 +286,19 @@ export default function SubscriptionDetailScreen() {
           <DetailRow
             icon={Tag}
             label="Status"
-            value={subscription.isActive ? 'Active' : 'Cancelled'}
-            valueColor={subscription.isActive ? '#3EB489' : '#F87171'}
+            value={statusLabel}
+            valueColor={statusColor}
           />
+          {subscription.notes && (
+            <>
+              <View className="h-px bg-surface-divider mx-4" />
+              <DetailRow
+                icon={FileText}
+                label="Notes"
+                value={subscription.notes}
+              />
+            </>
+          )}
         </Animated.View>
 
         {/* Actions */}
@@ -236,7 +306,7 @@ export default function SubscriptionDetailScreen() {
           entering={FadeInDown.duration(400).delay(300)}
           className="mx-5 mt-6 gap-3"
         >
-          <MintButton fullWidth variant="outline" onPress={() => {}}>
+          <MintButton fullWidth variant="outline" onPress={openEdit}>
             Edit Details
           </MintButton>
 
@@ -252,6 +322,161 @@ export default function SubscriptionDetailScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
+
+      {/* Edit Modal */}
+      <Modal visible={editVisible} animationType="slide" presentationStyle="pageSheet">
+        <View className="flex-1 bg-surface-bg" style={{ paddingTop: insets.top }}>
+          {/* Modal Header */}
+          <View className="flex-row items-center px-5 py-3 border-b border-surface-border">
+            <Pressable onPress={() => setEditVisible(false)} hitSlop={12}>
+              <X size={24} color="#6B7280" />
+            </Pressable>
+            <Text
+              className="flex-1 text-center text-[17px] text-text-primary"
+              style={{ fontWeight: '600' }}
+            >
+              Edit Subscription
+            </Text>
+            <Pressable onPress={handleSave} hitSlop={12} disabled={updateMutation.isPending}>
+              <Text
+                className="text-[16px] text-mint"
+                style={{ fontWeight: '600', opacity: updateMutation.isPending ? 0.5 : 1 }}
+              >
+                {updateMutation.isPending ? 'Saving...' : 'Save'}
+              </Text>
+            </Pressable>
+          </View>
+
+          <ScrollView className="flex-1 px-5 mt-4" keyboardShouldPersistTaps="handled">
+            {/* Name */}
+            <View className="mb-4">
+              <Text className="text-[13px] text-text-muted mb-1" style={{ fontWeight: '600' }}>
+                Name
+              </Text>
+              <TextInput
+                value={editName}
+                onChangeText={setEditName}
+                className="bg-white border border-surface-border rounded-lg px-4 py-3 text-[15px] text-text-primary"
+              />
+            </View>
+
+            {/* Amount */}
+            <View className="mb-4">
+              <Text className="text-[13px] text-text-muted mb-1" style={{ fontWeight: '600' }}>
+                Amount
+              </Text>
+              <TextInput
+                value={editAmount}
+                onChangeText={setEditAmount}
+                keyboardType="decimal-pad"
+                className="bg-white border border-surface-border rounded-lg px-4 py-3 text-[15px] text-text-primary"
+              />
+            </View>
+
+            {/* Frequency */}
+            <View className="mb-4">
+              <Text className="text-[13px] text-text-muted mb-1" style={{ fontWeight: '600' }}>
+                Frequency
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {FREQUENCIES.map((f) => (
+                  <Pressable
+                    key={f}
+                    onPress={() => setEditFrequency(f)}
+                    className="px-3 py-2 rounded-lg border"
+                    style={{
+                      backgroundColor: editFrequency === f ? '#F0FBF6' : '#FFF',
+                      borderColor: editFrequency === f ? '#3EB489' : '#E5E7EB',
+                    }}
+                  >
+                    <Text
+                      className="text-[13px]"
+                      style={{
+                        fontWeight: editFrequency === f ? '600' : '400',
+                        color: editFrequency === f ? '#3EB489' : '#6B7280',
+                      }}
+                    >
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Status */}
+            <View className="mb-4">
+              <Text className="text-[13px] text-text-muted mb-1" style={{ fontWeight: '600' }}>
+                Status
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {STATUSES.map((s) => (
+                  <Pressable
+                    key={s.value}
+                    onPress={() => setEditStatus(s.value)}
+                    className="px-3 py-2 rounded-lg border"
+                    style={{
+                      backgroundColor: editStatus === s.value ? `${s.color}15` : '#FFF',
+                      borderColor: editStatus === s.value ? s.color : '#E5E7EB',
+                    }}
+                  >
+                    <Text
+                      className="text-[13px]"
+                      style={{
+                        fontWeight: editStatus === s.value ? '600' : '400',
+                        color: editStatus === s.value ? s.color : '#6B7280',
+                      }}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Next Billing Date */}
+            <View className="mb-4">
+              <Text className="text-[13px] text-text-muted mb-1" style={{ fontWeight: '600' }}>
+                Next billing date
+              </Text>
+              <TextInput
+                value={editNextBilling}
+                onChangeText={setEditNextBilling}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#9CA3AF"
+                className="bg-white border border-surface-border rounded-lg px-4 py-3 text-[15px] text-text-primary"
+              />
+            </View>
+
+            {/* Notes */}
+            <View className="mb-6">
+              <Text className="text-[13px] text-text-muted mb-1" style={{ fontWeight: '600' }}>
+                Notes
+              </Text>
+              <TextInput
+                value={editNotes}
+                onChangeText={setEditNotes}
+                placeholder="Optional notes..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                className="bg-white border border-surface-border rounded-lg px-4 py-3 text-[15px] text-text-primary"
+                style={{ minHeight: 80 }}
+              />
+            </View>
+
+            <MintButton
+              fullWidth
+              onPress={handleSave}
+              loading={updateMutation.isPending}
+            >
+              Save Changes
+            </MintButton>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -285,7 +510,8 @@ function DetailRow({
       <Text className="text-[14px] text-text-secondary ml-3 flex-1">{label}</Text>
       <Text
         className="text-[14px]"
-        style={{ fontWeight: '600', color: valueColor ?? '#111827' }}
+        style={{ fontWeight: '600', color: valueColor ?? '#111827', maxWidth: 200 }}
+        numberOfLines={2}
       >
         {value}
       </Text>

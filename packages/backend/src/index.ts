@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
 import { ZodError } from 'zod';
 import { config } from './config.js';
+import { prisma } from './lib/prisma.js';
 import { authRoutes } from './routes/auth.js';
 import { ingestRoutes } from './routes/ingest.js';
 import { queueRoutes } from './routes/queue.js';
@@ -12,7 +13,13 @@ import { subscriptionRoutes } from './routes/subscriptions.js';
 import { merchantRoutes } from './routes/merchants.js';
 
 const app = Fastify({
-  logger: true,
+  logger: {
+    level: 'info',
+    redact: {
+      paths: ['req.body', 'req.headers.authorization', '*.email', '*.rawDescriptor'],
+      censor: '[REDACTED]',
+    },
+  },
 });
 
 // Plugins
@@ -21,6 +28,7 @@ await app.register(cors, {
   credentials: true,
 });
 
+// Global rate limit (fallback)
 await app.register(rateLimit, {
   max: config.rateLimit.max,
   timeWindow: config.rateLimit.timeWindow,
@@ -77,17 +85,43 @@ app.get('/health', async () => ({
   timestamp: new Date().toISOString(),
 }));
 
-// Routes
-await app.register(authRoutes, { prefix: '/v1/auth' });
-await app.register(ingestRoutes, { prefix: '/v1/ingest' });
-await app.register(queueRoutes, { prefix: '/v1/queue' });
+// Routes with per-route rate limits
+await app.register(async (scope) => {
+  scope.register(authRoutes);
+  // /register-profile: max 5/hour (IP-based for registration abuse prevention)
+  scope.addHook('onRoute', (routeOptions) => {
+    if (routeOptions.url === '/register-profile') {
+      routeOptions.config = {
+        ...routeOptions.config,
+        rateLimit: { max: 5, timeWindow: '1 hour' },
+      };
+    }
+  });
+}, { prefix: '/v1/auth' });
+
+await app.register(async (scope) => {
+  await scope.register(rateLimit, { max: 10, timeWindow: '1 hour' });
+  scope.register(ingestRoutes);
+}, { prefix: '/v1/ingest' });
+
+await app.register(async (scope) => {
+  await scope.register(rateLimit, { max: 200, timeWindow: '1 hour' });
+  scope.register(queueRoutes);
+}, { prefix: '/v1/queue' });
+
 await app.register(dashboardRoutes, { prefix: '/v1/dashboard' });
-await app.register(subscriptionRoutes, { prefix: '/v1/subscriptions' });
+
+await app.register(async (scope) => {
+  await scope.register(rateLimit, { max: 100, timeWindow: '1 hour' });
+  scope.register(subscriptionRoutes);
+}, { prefix: '/v1/subscriptions' });
+
 await app.register(merchantRoutes, { prefix: '/v1/merchants' });
 
 // Graceful shutdown
 const shutdown = async () => {
   await app.close();
+  await prisma.$disconnect();
   process.exit(0);
 };
 

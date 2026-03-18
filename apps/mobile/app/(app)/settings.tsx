@@ -13,7 +13,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuthStore } from '@/stores/authStore';
-import { signOut } from '@/services/auth';
+import { signOut, deleteAccount } from '@/services/auth';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -34,9 +34,14 @@ export default function SettingsScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            // TODO: Call backend delete endpoint
+            const result = await deleteAccount();
+            if (result.success) {
+              router.replace('/(auth)/login');
+            } else {
+              Alert.alert('Error', result.error ?? 'Failed to delete account');
+            }
           },
         },
       ],
@@ -91,7 +96,7 @@ export default function SettingsScreen() {
 
           <View className="bg-white rounded-card border border-surface-border overflow-hidden">
             <Pressable
-              onPress={() => Linking.openURL('https://subtracker.app/privacy')}
+              onPress={() => Linking.openURL('https://subtake.app/privacy')}
               className="flex-row items-center px-4 py-3.5"
             >
               <Shield size={18} color="#9CA3AF" />
@@ -137,7 +142,7 @@ export default function SettingsScreen() {
 
         {/* Version */}
         <Text className="text-center text-text-muted text-[12px] mt-8">
-          SubTracker v1.0.0
+          SubTake v1.0.0
         </Text>
       </View>
     </View>

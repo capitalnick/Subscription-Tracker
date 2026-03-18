@@ -1,4 +1,4 @@
-import { getAdminClient } from '../lib/supabase.js';
+import { prisma } from '../lib/prisma.js';
 import { normalizeToMonthly } from '../utils/currency.js';
 
 interface CategoryBreakdown {
@@ -42,16 +42,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export async function getDashboardData(userId: string) {
-  const db = getAdminClient();
-
-  const { data: subscriptions } = await db
-    .from('subscriptions')
-    .select('*, merchants(*)')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
-
-  const subs = subscriptions ?? [];
+  const subs = await prisma.subscription.findMany({
+    where: { userId, status: 'ACTIVE' },
+    include: { merchant: true },
+    orderBy: { createdAt: 'desc' },
+  });
 
   // Calculate monthly totals
   let totalMonthly = 0;
@@ -76,46 +71,47 @@ export async function getDashboardData(userId: string) {
   const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const upcomingRenewals = subs.filter(
     (sub) =>
-      sub.next_billing_date &&
-      new Date(sub.next_billing_date) >= now &&
-      new Date(sub.next_billing_date) <= weekFromNow,
+      sub.nextBillingDate &&
+      sub.nextBillingDate >= now &&
+      sub.nextBillingDate <= weekFromNow,
   );
 
   const formatSub = (sub: (typeof subs)[number]) => {
-    const merchant = sub.merchants as Record<string, unknown> | null;
-    const knownPlans = (merchant?.known_plans as unknown[]) ?? [];
+    const merchant = sub.merchant;
+    const knownPlans = (merchant?.knownPlans as unknown[]) ?? [];
     return {
       id: sub.id,
-      userId: sub.user_id,
-      merchantId: sub.merchant_id,
-      customName: sub.custom_name,
-      displayName: sub.custom_name ?? (merchant?.canonical_name as string) ?? 'Unknown',
+      userId: sub.userId,
+      merchantId: sub.merchantId,
+      customName: sub.customName,
+      displayName: sub.customName ?? merchant?.canonicalName ?? 'Unknown',
       amount: Number(sub.amount),
       currency: sub.currency,
       frequency: sub.frequency,
       category: sub.category,
-      nextBillingDate: sub.next_billing_date ?? null,
-      isActive: sub.is_active,
-      detectedPlanId: sub.detected_plan_id ?? null,
-      planConfirmed: sub.plan_confirmed ?? false,
-      logoUrl: (merchant?.logo_url as string) ?? null,
-      logoColor: (merchant?.logo_color as string) ?? '#9CA3AF',
-      logoLetter: (merchant?.logo_letter as string) ?? '?',
-      websiteUrl: (merchant?.website_url as string) ?? null,
+      nextBillingDate: sub.nextBillingDate ?? null,
+      status: sub.status,
+      isActive: sub.status === 'ACTIVE',
+      detectedPlanId: sub.detectedPlanId ?? null,
+      planConfirmed: sub.planConfirmed ?? false,
+      logoUrl: merchant?.logoUrl ?? null,
+      logoColor: merchant?.logoColor ?? '#9CA3AF',
+      logoLetter: merchant?.logoLetter ?? '?',
+      websiteUrl: merchant?.websiteUrl ?? null,
       merchant: merchant ? {
         id: merchant.id,
-        canonicalName: merchant.canonical_name,
+        canonicalName: merchant.canonicalName,
         slug: merchant.slug,
         category: merchant.category,
-        commonDescriptors: merchant.common_descriptors,
-        websiteUrl: merchant.website_url,
-        logoUrl: merchant.logo_url ?? null,
-        logoLetter: merchant.logo_letter,
-        logoColor: merchant.logo_color,
+        commonDescriptors: merchant.commonDescriptors,
+        websiteUrl: merchant.websiteUrl,
+        logoUrl: merchant.logoUrl ?? null,
+        logoLetter: merchant.logoLetter,
+        logoColor: merchant.logoColor,
         knownPlans,
       } : null,
-      createdAt: sub.created_at,
-      updatedAt: sub.updated_at,
+      createdAt: sub.createdAt,
+      updatedAt: sub.updatedAt,
     };
   };
 
